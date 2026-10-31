@@ -1,0 +1,11 @@
+version: v2
+clean: true
+plugins:
+  - local: protoc-gen-ts_proto
+    out: libs/contracts/src/generated
+    opt:
+      - nestJs=true
+      - addGrpcMetadata=true
+      - importSuffix=.js
+      - comments=false
+      - outputIndex=false

@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+package chat;
+
+service ChatService {
+  rpc CreateRoom (CreateRoomRequest) returns (Room);
+  rpc ListRooms (ListRoomsRequest) returns (ListRoomsResponse);
+  rpc JoinRoom (RoomRequest) returns (Room);
+  rpc LeaveRoom (RoomRequest) returns (LeaveRoomResponse);
+  rpc SendMessage (SendMessageRequest) returns (Message);
+  rpc ListMessages (ListMessagesRequest) returns (ListMessagesResponse);
+  rpc SubscribeRoom (RoomRequest) returns (stream Message);
+}
+
+message Room {
+  string id = 1;
+  string name = 2;
+  string owner_id = 3;
+  int32 member_count = 4;
+  bool joined = 5;
+  string created_at = 6;
+}
+
+message Message {
+  string id = 1;
+  string room_id = 2;
+  string author_id = 3;
+  string author_name = 4;
+  string content = 5;
+  string created_at = 6;
+}
+
+message CreateRoomRequest {
+  string name = 1;
+}
+
+message ListRoomsRequest {
+  bool joined_only = 1;
+}
+
+message ListRoomsResponse {
+  repeated Room rooms = 1;
+}
+
+message RoomRequest {
+  string room_id = 1;
+}
+
+message LeaveRoomResponse {
+  string room_id = 1;
+}
+
+message SendMessageRequest {
+  string room_id = 1;
+  string content = 2;
+}
+
+message ListMessagesRequest {
+  string room_id = 1;
+  int32 limit = 2;
+  optional string before = 3;
+}
+
+message ListMessagesResponse {
+  repeated Message messages = 1;
+  optional string next_cursor = 2;
+}
