@@ -1,0 +1,3 @@
+apps/*/src/generated
+libs/contracts/src/generated
+dist
