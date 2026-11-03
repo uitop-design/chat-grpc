@@ -1,0 +1,86 @@
+name: chat-grpc
+
+x-postgres: &postgres
+  image: postgres:17-alpine
+  restart: unless-stopped
+  environment: &postgres-env
+    POSTGRES_USER: chat
+    POSTGRES_PASSWORD: chat
+
+services:
+  auth-db:
+    <<: *postgres
+    environment:
+      <<: *postgres-env
+      POSTGRES_DB: auth
+    ports:
+      - "5433:5432"
+    volumes:
+      - auth-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chat -d auth"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  chat-db:
+    <<: *postgres
+    environment:
+      <<: *postgres-env
+      POSTGRES_DB: chat
+    ports:
+      - "5434:5432"
+    volumes:
+      - chat-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chat -d chat"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  auth:
+    build:
+      context: .
+      dockerfile: apps/auth/Dockerfile
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://chat:chat@auth-db:5432/auth?schema=public
+      GRPC_URL: 0.0.0.0:50051
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env, at least 32 characters}
+      JWT_EXPIRES_IN_SECONDS: 86400
+    depends_on:
+      auth-db:
+        condition: service_healthy
+
+  chat:
+    build:
+      context: .
+      dockerfile: apps/chat/Dockerfile
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://chat:chat@chat-db:5432/chat?schema=public
+      GRPC_URL: 0.0.0.0:50052
+    depends_on:
+      chat-db:
+        condition: service_healthy
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: apps/api-gateway/Dockerfile
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env, at least 32 characters}
+      AUTH_GRPC_URL: auth:50051
+      CHAT_GRPC_URL: chat:50052
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - auth
+      - chat
+
+volumes:
+  auth-db-data:
+  chat-db-data:
